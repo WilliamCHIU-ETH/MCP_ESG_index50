@@ -1,0 +1,53 @@
+schema: spec-driven
+
+context: |
+  Project: Claude-first ESG RAG MCP server.
+  Language preference: Traditional Chinese for planning and user-facing summaries.
+
+  Product positioning:
+  - This is an agent tool, not an ESG Q&A app, not a UI-first chatbot, and not a generic data product.
+  - The core asset is calibrated ESG retrieval and citation assembly.
+  - The user value is avoiding ESG report downloading, parsing, embedding, indexing, and retrieval tuning.
+  - First target user is Claude Desktop / Claude MCP. Do not optimize for agent-agnostic support before Claude works well.
+
+  Existing reusable asset:
+  - Source ESG RAG project is external to this repo and should not be committed.
+  - Existing local index is configured with CLAUDE_ESG_INDEX_PATH.
+  - Chroma collection: esg_reports_50
+  - Corpus: 50 Taiwan companies, 17,144 chunks
+  - Embedding model used by the existing index: OpenAI text-embedding-3-small, 1536 dimensions
+  - Citation metadata fields include company, source_file, page, chunk_id, char_count, language
+
+  Current MVP decisions:
+  - Phase 1 reuses the existing ChromaDB index; it does not rebuild PDFs, chunks, embeddings, or indexes.
+  - Phase 1 exposes retrieval evidence through MCP and lets Claude generate the final answer.
+  - Phase 1 default retrieval is vector-only.
+  - Hybrid/rerank strategies are allowed only as explicit experiments or later work.
+  - Query-time embedding must be dimension-compatible with the 1536-dimensional index.
+  - Direct Chroma query_texts is risky because a default embedding function can produce 384-dimensional vectors.
+
+  Historical evidence boundary:
+  - Prior ablation showed vector-only outperformed adaptive hybrid under the original corpus, embedding, ChromaDB, and RAGAS setup.
+  - That result is a design prior, not proof that a changed MCP retrieval implementation has the same quality.
+  - Any new retrieval strategy, embedding model, chunking, top-k, reranker, or tool schema requires at least a small re-validation before quality claims.
+
+  SDD/TDD expectations:
+  - Create OpenSpec proposal, design, specs, and tasks before implementation.
+  - Implementation tasks should start with failing tests.
+  - Test tool contract, query validation, embedding dimension handling, company filtering, top-k bounds, citation fields, output length, and no backend LLM generation.
+  - Full RAGAS is deferred until the MCP prototype is working; start with unit tests, integration tests, and 20-30 Claude smoke-test questions.
+
+rules:
+  proposal:
+    - Keep proposals concise and include explicit non-goals when scope could drift.
+    - Distinguish MVP decisions from Phase 2 or future backlog items.
+  design:
+    - Record why existing ChromaDB is reused or why a rebuild is justified.
+    - Record the retrieval default and how it affects old ablation claims.
+    - Record whether Claude or the backend generates final answers.
+  specs:
+    - Every requirement must be directly testable.
+    - Citation metadata and bounded output requirements must be explicit for retrieval tools.
+  tasks:
+    - Put test-writing tasks before implementation tasks.
+    - Include validation tasks for OpenSpec, automated tests, and Claude smoke testing.
