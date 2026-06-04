@@ -1,4 +1,4 @@
-.PHONY: setup test integration smoke run doctor
+.PHONY: setup test integration smoke lint format pre-commit-install pre-commit run doctor
 
 setup:
 	uv sync --extra dev --python 3.12
@@ -11,6 +11,20 @@ integration:
 
 smoke:
 	@set -a; [ ! -f .env ] || . ./.env; set +a; uv run pytest -q -m smoke
+
+lint:
+	uv run ruff check .
+	uv run ruff format --check .
+
+format:
+	uv run ruff format .
+	uv run ruff check --fix .
+
+pre-commit-install:
+	uv run pre-commit install
+
+pre-commit:
+	uv run pre-commit run --all-files
 
 run:
 	@set -a; [ ! -f .env ] || . ./.env; set +a; uv run claude-esg-mcp

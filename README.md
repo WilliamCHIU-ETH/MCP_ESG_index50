@@ -10,6 +10,12 @@ Local Claude-first MCP server for retrieving citation-ready evidence from the ex
 - Returns bounded evidence chunks with `company`, `source_file`, `page`, `chunk_id`, `content`, `score`, and `citation`
 - Leaves final answer synthesis to Claude
 
+## Project Metadata
+
+- License: MIT
+- Package metadata lives in `pyproject.toml`
+- Repository: <https://github.com/WilliamCHIU-ETH/MCP_ESG_index50>
+
 ## Local Run
 
 This project standardizes on Python 3.12, `uv`, and a local `.venv`.
@@ -38,6 +44,23 @@ Optional environment variables:
 
 Copy `.env.example` to `.env` for local runtime values. The template is intentionally early-stage and may change as the project evolves. The ESG vector database is not included in this public repo.
 
+## Developer Workflow
+
+Install pre-commit hooks once per clone:
+
+```bash
+make pre-commit-install
+```
+
+Run formatting and lint checks:
+
+```bash
+make lint
+make format
+```
+
+`pre-commit` runs `ruff format` and `ruff check` before each commit, so formatting and linting become part of the local commit path instead of a command you need to remember manually.
+
 ## Claude Desktop Config
 
 Example Claude Desktop MCP config:
@@ -64,17 +87,35 @@ Example Claude Desktop MCP config:
 
 ## Verification Commands
 
-Run unit and contract tests:
+Run unit and contract tests. These tests must not call OpenAI, ChromaDB, or other real external services:
 
 ```bash
 make test
 ```
 
-Run opt-in live smoke tests after configuring `.env`:
+Run integration tests. These may exercise multiple project components, but should still avoid real external services unless explicitly marked as smoke tests:
+
+```bash
+make integration
+```
+
+Run opt-in live smoke tests after configuring `.env`. Smoke tests may call OpenAI and the configured ESG ChromaDB index:
 
 ```bash
 make smoke
 ```
+
+Test layout:
+
+```text
+tests/
+├── conftest.py          # Shared pytest import path setup and future fixtures
+├── unit/                # Pure unit tests with fakes/mocks only
+├── integration/         # Cross-component tests without live external services
+└── smoke/               # Live API/index tests, skipped unless env is configured
+```
+
+Mocking rule: unit tests use fakes, `unittest.mock`, or `pytest-mock`; integration tests and above are the only layers allowed to touch broader runtime dependencies. Live external dependencies belong in `tests/smoke/`.
 
 Verify the MCP tool is registered:
 

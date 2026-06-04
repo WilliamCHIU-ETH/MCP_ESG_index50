@@ -61,14 +61,6 @@ class FakeCollection:
         return {"documents": [[]], "metadatas": [[]], "distances": [[]]}
 
 
-class FakeClient:
-    def __init__(self, collection: FakeCollection) -> None:
-        self.collection = collection
-
-    def get_collection(self, name: str) -> FakeCollection:
-        return self.collection
-
-
 def test_build_mcp_server_registers_search_tool_with_claude_focused_description() -> None:
     retrieval_service = FakeRetrievalService(response={"results": []})
 

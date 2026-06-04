@@ -446,15 +446,15 @@
           <tr>
             <td>把 retrieval 核心風險寫成可測 contract</td>
             <td>
-              <a href="../tests/test_retrieval.py">test_retrieval.py</a><br>
-              <a href="../tests/test_server.py">test_server.py</a>
+              <a href="../tests/unit/test_retrieval.py">test_retrieval.py</a><br>
+              <a href="../tests/unit/test_server.py">test_server.py</a>
             </td>
             <td>最容易 drift 的地方，例如 1536 維 embedding、必須使用 <code>query_embeddings</code>、不得 backend 生答案，都被鎖成測試。</td>
           </tr>
           <tr>
             <td>把 live 驗證留成明確下一階段，而不是假裝完成</td>
             <td>
-              <a href="../tests/test_integration.py">test_integration.py</a><br>
+              <a href="../tests/smoke/test_live_retrieval.py">test_live_retrieval.py</a><br>
               <a href="../docs/implementation-summary.md">implementation-summary.md</a>
             </td>
             <td>這次 session 很誠實地停在「本地可驗證」，沒有把缺少 API key / Claude Desktop 的工作假裝做完。</td>

@@ -10,7 +10,7 @@ from claude_esg_mcp.config import RetrievalSettings
 from claude_esg_mcp.server import build_default_retrieval_service
 
 
-pytestmark = [pytest.mark.integration, pytest.mark.smoke]
+pytestmark = pytest.mark.smoke
 
 
 def _require_live_env() -> Path:

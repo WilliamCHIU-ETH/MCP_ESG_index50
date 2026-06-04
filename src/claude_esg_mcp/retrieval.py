@@ -103,9 +103,7 @@ class RetrievalService:
 
         strategy_value = strategy or DEFAULT_STRATEGY
         if strategy_value not in SUPPORTED_STRATEGIES:
-            raise ValueError(
-                f"strategy must be one of: {', '.join(sorted(SUPPORTED_STRATEGIES))}"
-            )
+            raise ValueError(f"strategy must be one of: {', '.join(sorted(SUPPORTED_STRATEGIES))}")
 
         requested_top_k = self.settings.max_top_k if top_k is None else top_k
         if requested_top_k < 1:
@@ -117,9 +115,7 @@ class RetrievalService:
             self.settings.embedding_model,
         )
         if len(query_embedding) != EXPECTED_EMBEDDING_DIMENSION:
-            raise ValueError(
-                "query embedding dimension mismatch: expected 1536 dimensions"
-            )
+            raise ValueError("query embedding dimension mismatch: expected 1536 dimensions")
 
         raw_results = self.retriever.query(
             query_embedding=query_embedding,
@@ -130,10 +126,7 @@ class RetrievalService:
         return {
             "query": normalized_query,
             "strategy": strategy_value,
-            "results": [
-                self._format_result(result)
-                for result in raw_results
-            ],
+            "results": [self._format_result(result) for result in raw_results],
         }
 
     def _format_result(self, result: Mapping[str, Any]) -> dict[str, Any]:

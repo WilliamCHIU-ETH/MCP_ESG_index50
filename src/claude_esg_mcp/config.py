@@ -38,7 +38,5 @@ class RetrievalSettings:
                 "text-embedding-3-small",
             ),
             max_top_k=int(os.environ.get("CLAUDE_ESG_MAX_TOP_K", "5")),
-            max_content_chars=int(
-                os.environ.get("CLAUDE_ESG_MAX_CONTENT_CHARS", "1200")
-            ),
+            max_content_chars=int(os.environ.get("CLAUDE_ESG_MAX_CONTENT_CHARS", "1200")),
         )

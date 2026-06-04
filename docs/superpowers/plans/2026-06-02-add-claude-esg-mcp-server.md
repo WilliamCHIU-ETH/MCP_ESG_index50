@@ -20,9 +20,9 @@
 - Create: `src/claude_esg_mcp/retrieval.py`
 - Create: `src/claude_esg_mcp/server.py`
 - Create: `tests/conftest.py`
-- Create: `tests/test_retrieval.py`
-- Create: `tests/test_server.py`
-- Create: `tests/test_integration.py`
+- Create: `tests/unit/test_retrieval.py`
+- Create: `tests/unit/test_server.py`
+- Create: `tests/smoke/test_live_retrieval.py`
 - Modify: `openspec/changes/add-claude-esg-mcp-server/tasks.md`
 
 ### Task 1: Scaffold the minimal Python project
@@ -39,14 +39,14 @@
 ### Task 2: Lock the retrieval contract with failing tests
 
 **Files:**
-- Create: `tests/test_retrieval.py`
+- Create: `tests/unit/test_retrieval.py`
 - Create: `src/claude_esg_mcp/models.py`
 - Create: `src/claude_esg_mcp/retrieval.py`
 
 - [ ] Write a failing test for non-empty `query`, supported `strategy`, and bounded `top_k`.
-- [ ] Run `pytest tests/test_retrieval.py -q` and verify failure is caused by missing retrieval contract implementation.
+- [ ] Run `pytest tests/unit/test_retrieval.py -q` and verify failure is caused by missing retrieval contract implementation.
 - [ ] Write a failing test proving the embedding provider must return exactly 1536 dimensions before any Chroma query runs.
-- [ ] Run `pytest tests/test_retrieval.py -q` and verify the dimension test fails for the expected reason.
+- [ ] Run `pytest tests/unit/test_retrieval.py -q` and verify the dimension test fails for the expected reason.
 - [ ] Write a failing test proving Chroma is called with `query_embeddings` plus optional `where={"company": ...}` filtering.
 - [ ] Write a failing test proving each formatted result includes `company`, `source_file`, `page`, `chunk_id`, `content`, `score`, and `citation`, and that the returned payload is evidence chunks rather than a generated final answer.
 
@@ -62,25 +62,25 @@
 - [ ] Implement a Chroma adapter that opens `esg_reports_50`, queries via `query_embeddings`, and supports optional company filtering.
 - [ ] Implement vector-only search as the default and reject unsupported strategies before retrieval.
 - [ ] Implement citation-ready formatting with bounded content and stable citation strings.
-- [ ] Run `pytest tests/test_retrieval.py -q` until all retrieval tests pass.
+- [ ] Run `pytest tests/unit/test_retrieval.py -q` until all retrieval tests pass.
 
 ### Task 4: Expose the MCP server
 
 **Files:**
 - Create: `src/claude_esg_mcp/server.py`
-- Create: `tests/test_server.py`
+- Create: `tests/unit/test_server.py`
 
 - [ ] Add the MCP Python SDK dependency and a stdio server entrypoint.
 - [ ] Register `search_esg_reports` with a Claude-oriented description and input schema.
 - [ ] Connect the tool handler to the tested retrieval core.
 - [ ] Add startup/configuration error handling for missing index path, missing API key, and collection-load failure.
 - [ ] Add a test or command-level verification that the server advertises `search_esg_reports`.
-- [ ] Run `pytest tests/test_server.py -q` until the server contract passes.
+- [ ] Run `pytest tests/unit/test_server.py -q` until the server contract passes.
 
 ### Task 5: Add integration verification and close the change
 
 **Files:**
-- Create: `tests/test_integration.py`
+- Create: `tests/smoke/test_live_retrieval.py`
 - Modify: `openspec/changes/add-claude-esg-mcp-server/tasks.md`
 
 - [ ] Add an opt-in integration test path that copies the `CLAUDE_ESG_INDEX_PATH` ChromaDB index into a writable temp directory before loading Chroma.

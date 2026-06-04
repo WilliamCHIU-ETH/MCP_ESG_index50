@@ -49,7 +49,16 @@ class FakeCollection:
     def __init__(self, response: dict | None = None) -> None:
         self.response = response or {
             "documents": [["段落內容"]],
-            "metadatas": [[{"company": "台積電", "source_file": "tsmc.pdf", "page": 12, "chunk_id": "chunk-001"}]],
+            "metadatas": [
+                [
+                    {
+                        "company": "台積電",
+                        "source_file": "tsmc.pdf",
+                        "page": 12,
+                        "chunk_id": "chunk-001",
+                    }
+                ]
+            ],
             "distances": [[0.25]],
         }
         self.query_calls: list[dict] = []

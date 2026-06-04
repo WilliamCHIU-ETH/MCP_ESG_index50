@@ -11,6 +11,8 @@
 - Implemented a FastMCP stdio server that exposes `search_esg_reports` and connects directly to the tested retrieval core.
 - Standardized the project workflow on Python 3.12, `uv`, `.venv`, and `uv.lock`.
 - Kept local `.vendor` runtime support as a legacy fallback, but the documented workflow now uses `uv run`.
+- Added MIT licensing, complete public package metadata, and local pre-commit hooks for Ruff formatting/checking.
+- Split tests into `unit`, `integration`, and `smoke` directories with live dependencies isolated to smoke tests.
 
 ## Test Evidence
 

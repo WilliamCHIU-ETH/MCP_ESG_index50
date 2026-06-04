@@ -1,13 +1,22 @@
 [build-system]
-requires = ["setuptools>=68.0", "wheel"]
+requires = ["setuptools>=77.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "claude-esg-mcp"
+name = "mcp-esg-index50"
 version = "0.1.0"
-description = "Claude-first MCP server for Taiwan ESG report retrieval"
-readme = "openspec/project-brief.md"
+description = "MCP server for querying ESG reports of Taiwan top-50 listed companies"
+readme = "README.md"
 requires-python = ">=3.12,<3.13"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "William Chiu", email = "bill30813@gmail.com" }]
+keywords = ["mcp", "esg", "rag", "taiwan", "retrieval"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+]
 dependencies = [
     "chromadb>=0.5.5,<1.0.0",
     "mcp>=1.9.0,<2.0.0",
@@ -18,9 +27,16 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+    "pre-commit>=4.0.0,<5.0.0",
     "pytest>=8.2.0,<9.0.0",
     "pytest-asyncio>=0.23.6,<1.0.0",
+    "pytest-mock>=3.14.0,<4.0.0",
+    "ruff>=0.8.0,<1.0.0",
 ]
+
+[project.urls]
+Repository = "https://github.com/WilliamCHIU-ETH/MCP_ESG_index50"
+Issues = "https://github.com/WilliamCHIU-ETH/MCP_ESG_index50/issues"
 
 [project.scripts]
 claude-esg-mcp = "claude_esg_mcp.server:main"
@@ -35,3 +51,7 @@ markers = [
     "integration: tests that exercise multiple project components or external-like resources",
     "smoke: live tests that require OPENAI_API_KEY and a configured ESG ChromaDB index",
 ]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
