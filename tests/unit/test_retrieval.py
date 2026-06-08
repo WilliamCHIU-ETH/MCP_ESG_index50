@@ -1,6 +1,11 @@
 from dataclasses import dataclass, field
+import json
+from pathlib import Path
+import pickle
+import sqlite3
 
 import pytest
+from chromadb.segment.impl.vector.local_persistent_hnsw import PersistentData
 
 from claude_esg_mcp.config import RetrievalSettings
 from claude_esg_mcp.retrieval import ChromaRetriever, RetrievalService
@@ -70,6 +75,17 @@ class FakeCollection:
 
 class FakeClient:
     def __init__(self, collection: FakeCollection) -> None:
+        self.collection = collection
+        self.requested_names: list[str] = []
+
+    def get_collection(self, name: str) -> FakeCollection:
+        self.requested_names.append(name)
+        return self.collection
+
+
+class RecordingClient:
+    def __init__(self, path: str, collection: FakeCollection) -> None:
+        self.path = path
         self.collection = collection
         self.requested_names: list[str] = []
 
@@ -192,6 +208,186 @@ def test_chroma_retriever_loads_the_configured_collection(
     assert created_paths == [settings.index_path]
     assert client.requested_names == [settings.collection_name]
     assert retriever.collection is collection
+
+
+def test_chroma_retriever_migrates_legacy_collection_config_before_loading(
+    tmp_path: Path,
+) -> None:
+    db_dir = tmp_path / "esg_50_vector_db"
+    db_dir.mkdir()
+    sqlite_path = db_dir / "chroma.sqlite3"
+    conn = sqlite3.connect(sqlite_path)
+    conn.execute(
+        """
+        CREATE TABLE collections (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            dimension INTEGER,
+            database_id TEXT NOT NULL,
+            config_json_str TEXT,
+            schema_str TEXT
+        )
+        """
+    )
+    legacy_config = {
+        "vector_index": {
+            "hnsw": {
+                "space": "l2",
+                "ef_construction": 100,
+                "ef_search": 100,
+                "max_neighbors": 16,
+                "resize_factor": 1.2,
+                "sync_threshold": 1000,
+            }
+        },
+        "embedding_function": {"type": "legacy"},
+    }
+    conn.execute(
+        """
+        INSERT INTO collections (id, name, dimension, database_id, config_json_str, schema_str)
+        VALUES (?, ?, ?, ?, ?, ?)
+        """,
+        (
+            "collection-id",
+            "esg_reports_50",
+            1536,
+            "database-id",
+            json.dumps(legacy_config),
+            None,
+        ),
+    )
+    conn.commit()
+    conn.close()
+
+    settings = RetrievalSettings(index_path=str(db_dir), collection_name="esg_reports_50")
+    collection = FakeCollection()
+    created_clients: list[RecordingClient] = []
+
+    def client_factory(path: str) -> RecordingClient:
+        client = RecordingClient(path=path, collection=collection)
+        created_clients.append(client)
+        return client
+
+    retriever = ChromaRetriever.from_settings(settings, client_factory=client_factory)
+
+    migrated_config = json.loads(
+        sqlite3.connect(sqlite_path)
+        .execute(
+            "SELECT config_json_str FROM collections WHERE name = ?",
+            (settings.collection_name,),
+        )
+        .fetchone()[0]
+    )
+    assert migrated_config["_type"] == "CollectionConfigurationInternal"
+    assert migrated_config["hnsw_configuration"]["_type"] == "HNSWConfigurationInternal"
+    assert migrated_config["hnsw_configuration"]["M"] == 16
+    assert created_clients[0].requested_names == [settings.collection_name]
+    assert retriever.collection is collection
+
+
+def test_chroma_retriever_migrates_legacy_hnsw_pickle_before_loading(
+    tmp_path: Path,
+) -> None:
+    db_dir = tmp_path / "esg_50_vector_db"
+    db_dir.mkdir()
+    sqlite_path = db_dir / "chroma.sqlite3"
+    conn = sqlite3.connect(sqlite_path)
+    conn.execute(
+        """
+        CREATE TABLE collections (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            dimension INTEGER,
+            database_id TEXT NOT NULL,
+            config_json_str TEXT,
+            schema_str TEXT
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE TABLE segments (
+            id TEXT PRIMARY KEY,
+            type TEXT NOT NULL,
+            scope TEXT NOT NULL,
+            collection TEXT NOT NULL,
+            topic TEXT,
+            metadata TEXT
+        )
+        """
+    )
+    conn.execute(
+        """
+        INSERT INTO collections (id, name, dimension, database_id, config_json_str, schema_str)
+        VALUES (?, ?, ?, ?, ?, ?)
+        """,
+        (
+            "collection-id",
+            "esg_reports_50",
+            1536,
+            "database-id",
+            json.dumps(
+                {
+                    "_type": "CollectionConfigurationInternal",
+                    "hnsw_configuration": {
+                        "_type": "HNSWConfigurationInternal",
+                        "space": "l2",
+                        "ef_construction": 100,
+                        "ef_search": 100,
+                        "num_threads": 8,
+                        "M": 16,
+                        "resize_factor": 1.2,
+                        "batch_size": 100,
+                        "sync_threshold": 1000,
+                    },
+                }
+            ),
+            None,
+        ),
+    )
+    conn.execute(
+        """
+        INSERT INTO segments (id, type, scope, collection, topic, metadata)
+        VALUES (?, ?, ?, ?, ?, ?)
+        """,
+        (
+            "segment-id",
+            "urn:chroma:segment/vector/hnsw-local-persisted",
+            "VECTOR",
+            "collection-id",
+            None,
+            None,
+        ),
+    )
+    conn.commit()
+    conn.close()
+
+    segment_dir = db_dir / "segment-id"
+    segment_dir.mkdir()
+    with (segment_dir / "index_metadata.pickle").open("wb") as handle:
+        pickle.dump(
+            {
+                "dimensionality": None,
+                "total_elements_added": 10,
+                "id_to_label": {"chunk-1": 1},
+                "label_to_id": {1: "chunk-1"},
+                "id_to_seq_id": {},
+                "max_seq_id": None,
+            },
+            handle,
+        )
+
+    settings = RetrievalSettings(index_path=str(db_dir), collection_name="esg_reports_50")
+
+    def client_factory(path: str) -> RecordingClient:
+        return RecordingClient(path=path, collection=FakeCollection())
+
+    ChromaRetriever.from_settings(settings, client_factory=client_factory)
+
+    with (segment_dir / "index_metadata.pickle").open("rb") as handle:
+        migrated = pickle.load(handle)
+    assert isinstance(migrated, PersistentData)
+    assert migrated.dimensionality == 1536
 
 
 def test_chroma_retriever_omits_company_filter_when_not_provided() -> None:

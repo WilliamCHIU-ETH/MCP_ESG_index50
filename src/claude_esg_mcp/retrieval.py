@@ -3,6 +3,10 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+import json
+from pathlib import Path
+import pickle
+import sqlite3
 from typing import Any
 
 from claude_esg_mcp.config import RetrievalSettings
@@ -27,6 +31,7 @@ class ChromaRetriever:
         client_factory: Any | None = None,
     ) -> "ChromaRetriever":
         """Create a retriever from the configured Chroma index path."""
+        migrate_legacy_chroma_config(settings.index_path)
         if client_factory is None:
             import chromadb
 
@@ -152,3 +157,105 @@ class RetrievalService:
 def search_esg_reports(*args, **kwargs):
     """Compatibility wrapper kept for future integration."""
     raise NotImplementedError("Use RetrievalService.search_esg_reports instead")
+
+
+def migrate_legacy_chroma_config(index_path: str) -> None:
+    """Migrate legacy Chroma collection config JSON to the 0.6.x shape."""
+    sqlite_path = Path(index_path) / "chroma.sqlite3"
+    if not sqlite_path.exists():
+        return
+
+    connection = sqlite3.connect(sqlite_path)
+    try:
+        rows = connection.execute(
+            "SELECT id, config_json_str FROM collections WHERE config_json_str IS NOT NULL"
+        ).fetchall()
+        updates: list[tuple[str, str]] = []
+        for collection_id, raw_config in rows:
+            try:
+                config = json.loads(raw_config)
+            except json.JSONDecodeError:
+                continue
+
+            if config.get("_type") == "CollectionConfigurationInternal":
+                continue
+
+            hnsw = config.get("vector_index", {}).get("hnsw")
+            if not isinstance(hnsw, dict):
+                continue
+
+            migrated = {
+                "hnsw_configuration": {
+                    "space": hnsw.get("space", "l2"),
+                    "ef_construction": hnsw.get("ef_construction", 100),
+                    "ef_search": hnsw.get("ef_search", 100),
+                    "num_threads": hnsw.get("num_threads", 8),
+                    "M": hnsw.get("M", hnsw.get("max_neighbors", 16)),
+                    "resize_factor": hnsw.get("resize_factor", 1.2),
+                    "batch_size": hnsw.get("batch_size", 100),
+                    "sync_threshold": hnsw.get("sync_threshold", 1000),
+                    "_type": "HNSWConfigurationInternal",
+                },
+                "_type": "CollectionConfigurationInternal",
+            }
+            updates.append((json.dumps(migrated), collection_id))
+
+        if updates:
+            connection.executemany(
+                "UPDATE collections SET config_json_str = ? WHERE id = ?",
+                updates,
+            )
+            connection.commit()
+        migrate_legacy_hnsw_pickles(Path(index_path), connection)
+    finally:
+        connection.close()
+
+
+def migrate_legacy_hnsw_pickles(index_path: Path, connection: sqlite3.Connection) -> None:
+    """Rewrite legacy HNSW pickle payloads into PersistentData objects."""
+    try:
+        rows = connection.execute(
+            """
+            SELECT segments.id, collections.dimension
+            FROM segments
+            JOIN collections ON collections.id = segments.collection
+            WHERE segments.scope = 'VECTOR'
+            """
+        ).fetchall()
+    except sqlite3.OperationalError:
+        return
+
+    if not rows:
+        return
+
+    from chromadb.segment.impl.vector.local_persistent_hnsw import PersistentData
+
+    for segment_id, dimension in rows:
+        metadata_path = index_path / str(segment_id) / "index_metadata.pickle"
+        if not metadata_path.exists():
+            continue
+
+        with metadata_path.open("rb") as handle:
+            payload = pickle.load(handle)
+
+        if isinstance(payload, PersistentData):
+            if payload.dimensionality is None and dimension is not None:
+                payload.dimensionality = int(dimension)
+                with metadata_path.open("wb") as handle:
+                    pickle.dump(payload, handle)
+            continue
+
+        if not isinstance(payload, dict):
+            continue
+
+        migrated = PersistentData(
+            dimensionality=int(dimension)
+            if dimension is not None
+            else payload.get("dimensionality"),
+            total_elements_added=int(payload.get("total_elements_added", 0)),
+            id_to_label=dict(payload.get("id_to_label", {})),
+            label_to_id=dict(payload.get("label_to_id", {})),
+            id_to_seq_id=dict(payload.get("id_to_seq_id", {})),
+        )
+        with metadata_path.open("wb") as handle:
+            pickle.dump(migrated, handle)

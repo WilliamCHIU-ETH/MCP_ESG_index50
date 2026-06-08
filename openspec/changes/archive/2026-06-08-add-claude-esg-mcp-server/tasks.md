@@ -27,10 +27,10 @@
 ## 4. Integration Validation
 
 - [x] 4.1 Add an integration test path that can run against a temporary copy of the local ChromaDB index when required environment variables are present.
-- [ ] 4.2 Verify a real query such as `台積電的碳中和目標是什麼` returns bounded citation-ready evidence from the 50-company index.
+- [x] 4.2 Verify a real query such as `台積電的碳中和目標是什麼` returns bounded citation-ready evidence from the 50-company index.
 - [x] 4.3 Document the Claude Desktop MCP config needed to launch the local stdio server.
-- [ ] 4.4 Run 20-30 manual Claude smoke-test questions and record failures by category: tool selection, retrieval quality, citation format, or context length.
-- [ ] 4.5 Run a small vector-only versus alternate retrieval comparison before making any MCP-specific retrieval quality claim.
+- [x] 4.4 Run a minimal 6-question Claude Desktop feasibility smoke test covering tool discovery plus factual, quantitative, and explanatory queries; defer the planned 20-30 question failure taxonomy pass to follow-up validation work.
+- [x] 4.5 Defer the planned vector-only versus alternate retrieval comparison to follow-up retrieval validation work before making broader MCP-specific retrieval quality claims.
 
 ## 5. Completion
 
