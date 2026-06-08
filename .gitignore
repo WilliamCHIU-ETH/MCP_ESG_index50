@@ -20,3 +20,6 @@ dist/
 # Local tool caches
 .codex/
 .cache/
+
+# Local VS Code workspace settings
+.vscode/settings.json
