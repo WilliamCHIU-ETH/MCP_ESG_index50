@@ -42,11 +42,18 @@ retrieval logic lives in the MCP server itself.
 
 ## Open Questions
 
-- [ ] ADR-001: pgvector vs ChromaDB — does deployability require a migration?
-- [ ] ADR-002: embedding model versioning — how to handle model drift without full corpus rebuild?
+- [x] ADR-001: pgvector vs ChromaDB — **Resolved: pgvector** (managed cloud deployability; see ADR-001)
+- [x] ADR-002: embedding model versioning — **Resolved: Gemini Embedding 2 (`gemini-embedding-2`), 768 dims, versioned collection `esg_reports_50_v2`** (see ADR-002)
 - [ ] ADR-003: MCP adapter contract — what interface should Retrieval expose for MCP to stay thin?
 - [ ] Reranker strategy — cross-encoder vs score threshold for Phase 2?
 - [ ] Corpus refresh cadence — annual, triggered, or manual?
+
+### Embedding model (resolved)
+
+Phase 2 uses **Gemini Embedding 2** via the Gemini API. Chosen for state-of-the-art multilingual
+retrieval (MTEB 69.9), multimodal-ready architecture (ESG reports include tables and charts),
+and 100+ language support. Output dimension pinned at **768** using Matryoshka truncation.
+The corpus will be stored in `esg_reports_50_v2` (pgvector, `vector(768)` column).
 
 ## Graduation Criteria (Beta → Stable)
 
