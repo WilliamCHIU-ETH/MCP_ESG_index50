@@ -34,26 +34,23 @@ Three layers, each independently testable:
 **Ingestion layer** — offline pipeline: PDF → chunk → embed → store. Runs as a separate job,
 not on server startup.
 
-**Retrieval layer** — query-time: embed query → vector search → rerank (Phase 2+) → return
+**Retrieval layer** — query-time: embed query (Gemini Embedding 2, 768 dims; see ADR-002) → vector search (pgvector; see ADR-001) → rerank (Phase 2+) → return
 top-k with metadata. Storage-agnostic interface; concrete implementation behind an adapter.
 
 **Consumer layer** — MCP server acts as a thin adapter that calls the Retrieval layer. No
 retrieval logic lives in the MCP server itself.
 
+## Architecture Decisions
+
+- [ADR-001](../../docs/decisions/001-pgvector-vs-chroma.md) — pgvector as vector store (Accepted)
+- [ADR-002](../../docs/decisions/002-embedding-versioning.md) — Gemini Embedding 2, 768 dims (Accepted)
+- [ADR-003](../../docs/decisions/003-mcp-as-adapter.md) — MCP as thin adapter (Proposed)
+
 ## Open Questions
 
-- [x] ADR-001: pgvector vs ChromaDB — **Resolved: pgvector** (managed cloud deployability; see ADR-001)
-- [x] ADR-002: embedding model versioning — **Resolved: Gemini Embedding 2 (`gemini-embedding-2`), 768 dims, versioned collection `esg_reports_50_v2`** (see ADR-002)
-- [ ] ADR-003: MCP adapter contract — what interface should Retrieval expose for MCP to stay thin?
-- [ ] Reranker strategy — cross-encoder vs score threshold for Phase 2?
+- [ ] ADR-003: RetrievalService interface contract — finalize before Phase 2 implementation begins
+- [ ] Reranker strategy — cross-encoder vs score threshold; in Phase 2 scope or later?
 - [ ] Corpus refresh cadence — annual, triggered, or manual?
-
-### Embedding model (resolved)
-
-Phase 2 uses **Gemini Embedding 2** via the Gemini API. Chosen for state-of-the-art multilingual
-retrieval (MTEB 69.9), multimodal-ready architecture (ESG reports include tables and charts),
-and 100+ language support. Output dimension pinned at **768** using Matryoshka truncation.
-The corpus will be stored in `esg_reports_50_v2` (pgvector, `vector(768)` column).
 
 ## Graduation Criteria (Beta → Stable)
 

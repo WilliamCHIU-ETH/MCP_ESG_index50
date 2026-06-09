@@ -1,13 +1,15 @@
 # ADR-003: MCP Server as a Thin Consumer Adapter
 
 **Date:** 2026-06-09
-**Status:** Proposed — accepted for Phase 2 design
+**Status:** Proposed
 
 ## Context
 
 Phase 1 MCP server contains retrieval logic directly (embedding call, ChromaDB query, result
 formatting). This couples the transport layer (MCP/stdio) to the storage layer (ChromaDB).
 Any storage migration or retrieval change requires touching the MCP server.
+This ADR is pending formal acceptance; it will be marked Accepted when the RetrievalService
+interface contract is finalised (see Open Questions in esg-platform-v2/spec.md).
 
 ## Decision
 

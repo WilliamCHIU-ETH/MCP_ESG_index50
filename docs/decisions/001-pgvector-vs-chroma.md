@@ -1,7 +1,8 @@
 # ADR-001: pgvector vs ChromaDB as Vector Store
 
 **Date:** 2026-06-09
-**Status:** Open
+**Date decided:** 2026-06-09
+**Status:** Accepted
 
 ## Context
 
@@ -11,7 +12,12 @@ pgvector runs inside PostgreSQL and enables SQL-native metadata filtering alongs
 
 ## Decision
 
-TBD — to be decided before Phase 2 implementation begins.
+Adopt pgvector (PostgreSQL extension) as the Phase 2 vector store.
+Primary driver: managed cloud deployability. ChromaDB has no viable hosted offering
+for production use. pgvector runs on any managed PostgreSQL (Supabase, Neon, RDS).
+Secondary: SQL-native metadata filtering enables future joins without an ORM layer.
+Migration cost accepted: corpus will be re-embedded as part of the Gemini embedding
+migration (see ADR-002), so the incremental pgvector migration cost is near-zero.
 
 ## Options Considered
 
@@ -25,10 +31,8 @@ TBD — to be decided before Phase 2 implementation begins.
 
 ## Consequences
 
-If ChromaDB: Phase 2 stays local-only; hosted deployment blocked until a later ADR revisits.
-If pgvector: corpus must be migrated; retrieval tests must be re-run for parity.
-
-## Open Questions
-
-- Is hosted deployment a Phase 2 goal or Phase 3?
-- What is the acceptable migration downtime window?
+- Phase 2 corpus must be migrated from ChromaDB to pgvector; this is absorbed into the
+  Gemini embedding re-embed job (ADR-002) to avoid a separate migration step.
+- Retrieval parity tests must be re-run against the pgvector baseline before the old
+  ChromaDB index is retired.
+- Hosted deployment is now unblocked; any managed PostgreSQL provider is a valid target.
