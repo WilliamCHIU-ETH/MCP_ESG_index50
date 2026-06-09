@@ -5,12 +5,9 @@
 
 ## Context
 
-Phase 1 uses OpenAI `text-embedding-3-small` (1536 dimensions). The index and query embedding
-must use the same model version. If the model is deprecated or upgraded, the corpus must be
-re-embedded — a non-trivial cost for 17,144 chunks.
+Phase 1 使用 OpenAI `text-embedding-3-small`（1536 維度）。索引與查詢的 embedding 必須使用相同的模型版本；若模型被棄用或升級，語料庫就必須重新 embed——對 17,144 個 chunk 而言是不可忽視的成本。
 
-Phase 2 migrates the vector store to pgvector (ADR-001). This is a natural point to also
-upgrade the embedding model before the corpus is rebuilt.
+Phase 2 將向量儲存遷移至 pgvector（ADR-001），這是在語料庫重建之前一併升級 embedding 模型的自然時機點。
 
 ## Decision
 
@@ -62,7 +59,7 @@ The corpus rebuild is a breaking change to the retrieval layer. It requires:
 
 ## Consequences
 
-- Phase 2 re-embed job targets `gemini-embedding-2` at 768 dimensions into `esg_reports_50_v2`.
-- Query path must read `EMBEDDING_MODEL` from config; hardcoded model strings are a build error.
-- The 768-dim pgvector index uses `vector(768)` column type; this must be reflected in the schema migration.
-- Future model swaps follow the versioned-collection pattern and require an ADR amendment.
+- Phase 2 的 re-embed 作業以 `gemini-embedding-2`（768 維度）為目標，寫入 `esg_reports_50_v2`。
+- 查詢路徑必須從設定檔讀取 `EMBEDDING_MODEL`；程式碼中硬編碼模型字串視為建置錯誤。
+- 768 維的 pgvector 索引使用 `vector(768)` 欄位型別；此設定必須反映在 schema 遷移腳本中。
+- 未來的模型替換遵循版本化 collection 的模式，並需要補充一份 ADR amendment。

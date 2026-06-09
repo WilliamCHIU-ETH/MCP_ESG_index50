@@ -6,9 +6,7 @@
 
 ## Context
 
-Phase 1 uses a local ChromaDB file index. ChromaDB works for local development but has no
-managed hosted offering, limited RBAC, and no SQL join capability for metadata queries.
-pgvector runs inside PostgreSQL and enables SQL-native metadata filtering alongside vector search.
+Phase 1 使用本地 ChromaDB 檔案索引。ChromaDB 適合本地開發，但沒有可用的代管服務、RBAC 有限，且無法對 metadata 進行 SQL join 查詢。pgvector 以 PostgreSQL extension 的形式運作，可在向量搜尋的同時進行 SQL 原生的 metadata 過濾。
 
 ## Decision
 
@@ -31,8 +29,6 @@ migration (see ADR-002), so the incremental pgvector migration cost is near-zero
 
 ## Consequences
 
-- Phase 2 corpus must be migrated from ChromaDB to pgvector; this is absorbed into the
-  Gemini embedding re-embed job (ADR-002) to avoid a separate migration step.
-- Retrieval parity tests must be re-run against the pgvector baseline before the old
-  ChromaDB index is retired.
-- Hosted deployment is now unblocked; any managed PostgreSQL provider is a valid target.
+- Phase 2 語料庫需從 ChromaDB 遷移至 pgvector；此工作已合併入 Gemini embedding 的 re-embed 作業（ADR-002），避免額外的獨立遷移步驟。
+- 在退役舊 ChromaDB 索引前，必須針對 pgvector baseline 重新執行 retrieval 一致性測試。
+- 代管部署不再受阻；任何代管 PostgreSQL 服務商均可作為目標部署環境。
