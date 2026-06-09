@@ -9,30 +9,13 @@ OpenSpec does not have a separate backlog command in this setup. Use active `ope
 - Do not mix corpus rebuild, storage migration, hosted deployment, and MCP tool contract work in the same change.
 - Promote a backlog item into `openspec/changes/<name>/` only when it is ready for proposal/design/spec/tasks.
 
+## Done
+
+- `add-claude-esg-mcp-server`
+  Phase 1 MVP. MCP server exposes `search_esg_reports`, vector retrieval via ChromaDB,
+  18 unit tests pass, integration green. Closed 2026-06-09.
+
 ## Now
-
-### `add-claude-esg-mcp-server`
-
-Status: active OpenSpec change.
-
-Purpose: Build the Phase 1 Claude-first MCP retrieval MVP.
-
-Must include:
-- TDD-first implementation.
-- `search_esg_reports` MCP tool.
-- Existing ChromaDB index reuse.
-- OpenAI `text-embedding-3-small` query embedding compatibility.
-- Vector-only default retrieval.
-- Citation-ready bounded evidence output.
-- Claude smoke testing.
-
-Artifacts:
-- `openspec/changes/add-claude-esg-mcp-server/proposal.md`
-- `openspec/changes/add-claude-esg-mcp-server/design.md`
-- `openspec/changes/add-claude-esg-mcp-server/specs/claude-esg-mcp-retrieval/spec.md`
-- `openspec/changes/add-claude-esg-mcp-server/tasks.md`
-
-## Next
 
 ### `run-mcp-retrieval-validation`
 
@@ -46,6 +29,8 @@ Likely scope:
 - Small vector-only vs alternate retrieval comparison.
 - Citation quality review.
 - Failure taxonomy: tool selection, retrieval quality, citation format, context length.
+
+## Next
 
 ### `document-claude-installation`
 

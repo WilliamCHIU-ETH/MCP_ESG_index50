@@ -76,7 +76,17 @@ Phase 1 succeeds when a local Claude MCP server can:
 
 ## Current Active Change
 
-- `add-claude-esg-mcp-server`: Phase 1 Claude-first MCP retrieval MVP.
+- `add-claude-esg-mcp-server`: **Complete** (Phase 1 MCP retrieval MVP delivered)
+
+## Phase 2 Focus
+
+Entry conditions before Phase 2 implementation begins:
+
+- Canonical schema — 9 core entities defined (company, report, section, chunk, embedding, citation, query, result, evaluation)
+- Three-layer separation — Ingestion / Retrieval / Consumer layers explicitly decoupled
+- Startup mutation moved out of the query-serving path (ingestion job, not server startup)
+- ADR-001: pgvector vs ChromaDB decision closed
+- ADR-002: embedding model version governance policy defined
 
 ## Phase 2 Candidates
 

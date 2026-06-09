@@ -1,7 +1,10 @@
 # claude-esg-mcp-retrieval Specification
 
+> **Status:** Closed — feasibility confirmed. Superseded by esg-platform-v2.
+> **Closed date:** 2026-06-09
+
 ## Purpose
-TBD - created by archiving change add-claude-esg-mcp-server. Update Purpose after archive.
+Phase 1 delivered an MCP server exposing `search_esg_reports` for Claude-callable vector retrieval over 50 Taiwan companies' ESG reports, using a local ChromaDB index and OpenAI `text-embedding-3-small`, with 18 unit tests passing and integration validated.
 ## Requirements
 ### Requirement: MCP server exposes ESG retrieval tool
 The system SHALL expose a Claude-callable MCP tool named `search_esg_reports` for searching Taiwan ESG report evidence.
