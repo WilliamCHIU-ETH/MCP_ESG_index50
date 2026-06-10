@@ -9,6 +9,7 @@ context: |
   - The core asset is calibrated ESG retrieval and citation assembly.
   - The user value is avoiding ESG report downloading, parsing, embedding, indexing, and retrieval tuning.
   - First target user is Claude Desktop / Claude MCP. Do not optimize for agent-agnostic support before Claude works well.
+  - Phase 2 true north: a publicly hosted, multi-user remote MCP server over Streamable HTTP (paste a URL into Claude Desktop, zero local setup). Local stdio remains the development transport. Transport and auth decisions: docs/decisions/004-remote-transport-and-auth.md.
 
   Existing reusable asset:
   - Source ESG RAG project is external to this repo and should not be committed.
