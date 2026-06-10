@@ -74,10 +74,6 @@ Phase 1 succeeds when a local Claude MCP server can:
 - full RAGAS rerun
 - agent-agnostic optimization
 
-## Current Active Change
-
-- `add-claude-esg-mcp-server`: **Complete** (Phase 1 MCP retrieval MVP delivered)
-
 ## Phase 2 Focus
 
 Entry conditions before Phase 2 implementation begins:
@@ -85,14 +81,9 @@ Entry conditions before Phase 2 implementation begins:
 - Canonical schema — 9 core entities defined (company, report, section, chunk, embedding, citation, query, result, evaluation)
 - Three-layer separation — Ingestion / Retrieval / Consumer layers explicitly decoupled
 - Startup mutation moved out of the query-serving path (ingestion job, not server startup)
-- ADR-001: pgvector vs ChromaDB decision closed
-- ADR-002: embedding model version governance policy defined
+- All Phase 2 ADRs finalized — status lives only in `docs/decisions/` (see also
+  `esg-platform-v2/spec.md` Open Questions)
 
-## Phase 2 Candidates
-
-- Rebuild or migrate embeddings only if Phase 1 proves the MCP workflow is worth improving.
-- Compare Google embedding against the existing OpenAI embedding path.
-- Migrate storage from ChromaDB to PostgreSQL + pgvector if deployability or maintainability becomes the bottleneck.
-- Add a corpus refresh pipeline for newer ESG reports.
-- Run expanded retrieval and citation evaluation.
-- Consider hosted MCP only after local Claude usage is validated.
+Phase 2 roadmap and migration plan live in `openspec/backlog.md`
+(see `migrate-storage-and-embedding-v2`). This brief does not track work items or
+decision status; it only defines product positioning and scope.
