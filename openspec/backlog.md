@@ -1,139 +1,133 @@
 # ESG MCP Backlog
 
-OpenSpec does not have a separate backlog command in this setup. Use active `openspec/changes/*` as executable backlog items, and use this file as the roadmap that decides which changes to create next.
+本專案的 OpenSpec 設定沒有獨立的 backlog 指令。可執行的工作項以 `openspec/changes/*` 為準，本檔案是決定「接下來要建立哪個 change」的 roadmap。
 
-## Backlog Policy
+## Backlog 原則
 
-- Keep Phase 1 narrow until Claude can reliably use the local MCP tool.
-- Create one OpenSpec change per coherent implementation slice.
-- Do not mix corpus rebuild, storage migration, hosted deployment, and MCP tool contract work in the same change.
-- Promote a backlog item into `openspec/changes/<name>/` only when it is ready for proposal/design/spec/tasks.
+- 本檔案是純 roadmap：只記「項目名稱 + 目的 + 進入條件」。決策只存在於
+  `docs/decisions/`（ADR）；此處絕不重述決策狀態，只放連結。
+- 在 Claude 能穩定使用本地 MCP tool 之前，Phase 1 範圍保持窄。
+- 每一個連貫的實作切片對應一個 OpenSpec change。
+- ADR 明確決定時，允許**工作**綑綁；但**驗證**不可混合。每個遷移變數
+  （儲存、embedding 模型、代管部署、tool 合約）必須有獨立的驗證關卡，
+  讓任何指標退化都能歸因到單一變數。
+- backlog 項目只有在 proposal/design/spec/tasks 都準備好時，才升級為
+  `openspec/changes/<name>/`。
 
-## Now
+> 原則沿革：原本的「不可混合遷移」規則與 ADR-001/ADR-002 決定的綑綁遷移衝突
+> （2026-06-10 標記為「Known Inconsistency」）。同日由 owner 決議解決：
+> **工作綑綁、驗證分段**——見下方 `migrate-storage-and-embedding-v2`。
 
-### `add-claude-esg-mcp-server`
+## 已完成（Done）
 
-Status: active OpenSpec change.
+- `add-claude-esg-mcp-server` — Phase 1 MVP（MCP server、ChromaDB 向量檢索、
+  18 個 unit test、integration 通過）。2026-06-09 結案。
 
-Purpose: Build the Phase 1 Claude-first MCP retrieval MVP.
-
-Must include:
-- TDD-first implementation.
-- `search_esg_reports` MCP tool.
-- Existing ChromaDB index reuse.
-- OpenAI `text-embedding-3-small` query embedding compatibility.
-- Vector-only default retrieval.
-- Citation-ready bounded evidence output.
-- Claude smoke testing.
-
-Artifacts:
-- `openspec/changes/add-claude-esg-mcp-server/proposal.md`
-- `openspec/changes/add-claude-esg-mcp-server/design.md`
-- `openspec/changes/add-claude-esg-mcp-server/specs/claude-esg-mcp-retrieval/spec.md`
-- `openspec/changes/add-claude-esg-mcp-server/tasks.md`
-
-## Next
+## 現在（Now）
 
 ### `run-mcp-retrieval-validation`
 
-Purpose: Validate whether MCP retrieval behavior preserves the old vector-only advantage.
+目的：驗證 MCP 檢索行為是否保留舊有 vector-only 的優勢。
 
-Entry condition:
-- Phase 1 MCP server can run locally.
+進入條件：
+- Phase 1 MCP server 可在本地執行。
 
-Likely scope:
-- 20-30 smoke-test questions.
-- Small vector-only vs alternate retrieval comparison.
-- Citation quality review.
-- Failure taxonomy: tool selection, retrieval quality, citation format, context length.
+預期範圍：
+- 20–30 題 smoke test。
+- 小規模 vector-only vs 其他檢索方式比較。
+- 引用品質審查。
+- 失敗分類：tool 選擇、檢索品質、引用格式、context 長度。
+
+## 接下來（Next）
 
 ### `document-claude-installation`
 
-Purpose: Make the local Claude MCP setup repeatable.
+目的：讓本地 Claude MCP 安裝設定可重現。
 
-Entry condition:
-- MCP server entrypoint is stable.
+進入條件：
+- MCP server 進入點穩定。
 
-Likely scope:
-- Claude Desktop config example.
-- Environment variables.
-- Local index path expectations.
-- Troubleshooting for missing API key, missing index, and embedding dimension mismatch.
+預期範圍：
+- Claude Desktop 設定範例。
+- 環境變數。
+- 本地 index 路徑的預期行為。
+- 疑難排解：缺 API key、缺 index、embedding 維度不符。
 
-## Later
+## 之後（Later）
 
-### `compare-google-embedding-pipeline`
+### `migrate-storage-and-embedding-v2`
 
-Purpose: Test whether Google embedding should replace or supplement the existing OpenAI embedding path.
+目的：將向量儲存從 ChromaDB 遷移至 pgvector，並以 Gemini Embedding 2（768d）
+重新 embed 語料庫——工作綑綁為一個 effort，但採**分段驗證**。
 
-Entry condition:
-- Phase 1 MCP value is validated.
+依據 [ADR-001](../docs/decisions/001-pgvector-vs-chroma.md) 與
+[ADR-002](../docs/decisions/002-embedding-versioning.md)。本項目取代原先的
+`compare-google-embedding-pipeline` 與 `migrate-index-to-pgvector` 兩個項目。
 
-Likely scope:
-- Confirm Google embedding endpoint and PDF input behavior.
-- Test page-level or chunk-level embedding behavior.
-- Compare embedding dimensions, cost, latency, and retrieval quality.
-- Decide whether the whole corpus must be rebuilt.
+進入條件：
+- `run-mcp-retrieval-validation` 完成（建立檢索 baseline）。
 
-### `migrate-index-to-pgvector`
+分段驗證（單一變數控制）：
+1. **Stage 1 — 儲存變數**：將現有 OpenAI 1536d 向量原樣複製進 pgvector
+   （不重新 embed），對 ChromaDB baseline 跑 parity test。此階段的任何差異
+   只可能來自儲存／索引層。
+2. **Stage 2 — 模型變數**：以 Gemini Embedding 2（768d）re-embed 至版本化
+   collection `esg_reports_50_v2`，依 ADR-002 validation gate 對 Stage 1
+   baseline 跑 NDCG@10。此階段的任何差異只可能來自 embedding 模型。
 
-Purpose: Move retrieval storage from local ChromaDB to PostgreSQL + pgvector if deployment or maintainability requires it.
-
-Entry condition:
-- There is a clear reason ChromaDB is blocking the next product step.
-
-Likely scope:
-- PostgreSQL schema for company, report, chunk, page, content, embedding, metadata.
-- Vector search query implementation.
-- Data migration from existing ChromaDB or regenerated chunks.
-- Parity tests against the ChromaDB retrieval baseline.
+預期範圍：
+- PostgreSQL schema：company、report、chunk、page、content、embedding、metadata。
+- 向量搜尋查詢實作。
+- Stage 1 向量複製 + parity test；Stage 2 re-embed pipeline + NDCG@10 關卡。
+- 依 ADR-002 的 rollback window 與舊語料庫保留政策。
 
 ### `rebuild-corpus-from-pdfs`
 
-Purpose: Recreate the corpus from source PDFs when new years, new reports, or a new embedding strategy requires it.
+目的：當新年度、新報告書或新 embedding 策略需要時，從來源 PDF 重建語料庫。
 
-Entry condition:
-- Source PDF list and report year policy are defined.
+進入條件：
+- 來源 PDF 清單與報告年度政策已定義。
 
-Likely scope:
-- Company/report manifest.
-- PDF download or local import pipeline.
-- Text extraction and chunking.
-- Embedding generation.
-- Index build.
-- Corpus inventory report.
+預期範圍：
+- 公司／報告書 manifest。
+- PDF 下載或本地匯入 pipeline。
+- 文字抽取與 chunking。
+- Embedding 產生。
+- Index 建置。
+- 語料庫盤點報告。
 
 ### `add-corpus-refresh-workflow`
 
-Purpose: Support future updates of ESG reports without manual one-off rebuilds.
+目的：支援 ESG 報告書的後續更新，不必每次手動一次性重建。
 
-Entry condition:
-- Rebuild pipeline exists and is reliable.
+進入條件：
+- 重建 pipeline 已存在且可靠。
 
-Likely scope:
-- Report source manifest.
-- Versioned corpus metadata.
-- Incremental update strategy.
-- Regression checks for retrieval and citation quality.
+預期範圍：
+- 報告來源 manifest。
+- 版本化語料庫 metadata。
+- 增量更新策略。
+- 檢索與引用品質的回歸檢查。
 
 ### `host-mcp-service`
 
-Purpose: Evaluate hosted deployment after local Claude usage works.
+目的：在本地 Claude 使用驗證後，評估代管部署。
 
-Entry condition:
-- Local MCP is useful and repeatable.
+進入條件：
+- 本地 MCP 有用且可重現（`run-mcp-retrieval-validation` 完成）。
+- [ADR-003](../docs/decisions/003-mcp-as-adapter.md) 定案。
 
-Likely scope:
-- Deployment target.
-- Auth and rate limiting.
-- Data access model.
-- Cost model.
-- Operational monitoring.
+預期範圍：
+- 部署目標。
+- 認證與速率限制。
+- 資料存取模型。
+- 成本模型。
+- 維運監控。
 
-## Explicitly Deferred
+## 明確延後（Explicitly Deferred）
 
-- UI or dashboard.
-- Backend-generated ESG final answers.
-- User-uploaded PDF ingestion.
-- Full RAGAS benchmark before the MCP prototype is working.
-- Agent-agnostic tool packaging before Claude-first usage is good.
+- UI 或 dashboard。
+- 後端直接產生 ESG 最終答案。
+- 使用者上傳 PDF 的 ingestion。
+- MCP 原型可用前的完整 RAGAS benchmark。
+- Claude-first 體驗成熟前的 agent-agnostic 工具封裝。
