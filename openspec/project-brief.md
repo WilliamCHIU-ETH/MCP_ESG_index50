@@ -4,6 +4,14 @@
 
 Turn the existing Taiwan ESG RAG retrieval work into a Claude-first MCP server that lets Claude retrieve citation-ready ESG report evidence without users rebuilding the corpus, embeddings, or index.
 
+## Destination (True North)
+
+A publicly hosted, multi-user remote MCP server over Streamable HTTP. Anyone can paste a URL
+into Claude Desktop and query the ESG corpus — no local setup, no local index, no local
+environment required. Phase 1's local stdio server validated feasibility; everything in
+Phase 2 (pgvector, re-embedding, layer separation) is a step toward this destination.
+Transport and auth decisions live in ADR-004.
+
 ## Product Boundary
 
 This project is an agent tool. It is not an ESG Q&A web app, not a data dashboard, and not a generic ESG data product.
@@ -19,7 +27,9 @@ The first version is for Claude users, especially Claude Desktop or another Clau
 3. The MCP server returns bounded evidence chunks with citations.
 4. Claude writes the answer using those citations.
 
-Agent-agnostic support is a later expansion, not a Phase 1 constraint.
+Agent-agnostic support is a later expansion, not a Phase 1 constraint. The end state is remote
+URL-based connection (see Destination above); local stdio was the Phase 1 delivery form, and
+remains the development transport.
 
 ## Existing Assets
 

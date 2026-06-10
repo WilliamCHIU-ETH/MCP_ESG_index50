@@ -111,17 +111,21 @@
 
 ### `host-mcp-service`
 
-目的：在本地 Claude 使用驗證後，評估代管部署。
+目的：交付公開代管的多使用者遠端 MCP server（Streamable HTTP）——本專案的
+**true north**。使用者貼一個 URL 到 Claude Desktop 即可查詢 ESG 語料庫，
+無需任何本地設置。
 
 進入條件：
 - 本地 MCP 有用且可重現（`run-mcp-retrieval-validation` 完成）。
-- [ADR-003](../docs/decisions/003-mcp-as-adapter.md) 定案。
+- `migrate-storage-and-embedding-v2` 完成（遠端服務不能依賴本地 ChromaDB 檔案）。
+- [ADR-003](../docs/decisions/003-mcp-as-adapter.md) 與
+  [ADR-004](../docs/decisions/004-remote-transport-and-auth.md) 定案。
 
 預期範圍：
-- 部署目標。
-- 認證與速率限制。
-- 資料存取模型。
-- 成本模型。
+- Transport 遷移：stdio → Streamable HTTP（stdio 保留作本地開發用）。
+- 認證（依 ADR-004 決議的 auth 模型）與速率限制。
+- 多使用者並發與 RetrievalService stateless 驗證。
+- 部署目標與成本模型。
 - 維運監控。
 
 ## 明確延後（Explicitly Deferred）
