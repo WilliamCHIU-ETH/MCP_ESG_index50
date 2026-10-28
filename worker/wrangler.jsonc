@@ -1,0 +1,9 @@
+{
+  "name": "esg-mcp",
+  "main": "src/worker.py",
+  "compatibility_date": "2026-10-27",
+  "compatibility_flags": ["python_workers"],
+  "vectorize": [{ "binding": "VECTORIZE", "index_name": "esg-reports-256" }],
+  "observability": { "enabled": true }
+  // Secrets (not in this file): OPENAI_API_KEY, MCP_PATH_TOKEN. See worker/README.md.
+}

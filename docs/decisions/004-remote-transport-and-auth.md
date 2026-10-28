@@ -1,7 +1,7 @@
 # ADR-004: Remote Transport and Auth Model
 
 **Date:** 2026-06-10
-**Status:** Proposed
+**Status:** Accepted with amendments（2026-10-28，見文末與 [ADR-005](005-cloudflare-serverless.md)）
 
 ## Context
 
@@ -50,6 +50,20 @@ Addendum）。不提供 HTTP+SSE 向下相容端點，除非實測發現主流 M
 - `host-mcp-service` backlog 項目以本 ADR 為進入條件之一。
 - MCP server 需要第二個進入點（HTTP）；依 ADR-003，retrieval 邏輯不受影響。
 - 公開端點引入維運成本（監控、限流、濫用處理），需在部署前納入成本模型。
+
+## Amendment (2026-10-28): Accepted with amendments
+
+實作見 [ADR-005](005-cloudflare-serverless.md)。對照 Acceptance Criteria：
+
+1. **Transport：** 採用 MCP **2026-07-28 無狀態** HTTP（單一 `POST`，`server/discover`／`tools/list`／
+   `tools/call`，檢查 `MCP-Protocol-Version`、`Mcp-Method`、`Mcp-Name`），並保留舊版無狀態
+   `initialize` 給舊 client。不需要長連線或 SSE，因此 serverless（Cloudflare Workers）可行。
+2. **Auth：** 起步採「**隨機路徑 token**」（`/mcp/<MCP_PATH_TOKEN>`），不符一律 404，且不呼叫 OpenAI。
+   這比「無認證 + IP rate limit」更能防成本濫用，又維持「貼 URL 即用」。**OAuth 延後**到需要多使用者或
+   per-user 配額時。
+3. **Rate limiting／成本上限：** 程式層限制 query ≤ 500 字、body ≤ 16 KiB；帳號層由 Workers Free 每日
+   10 萬次請求上限兜底（超限只停擺不收費）；OpenAI 端以 5 美元預付且關閉自動儲值作為硬上限。
+   per-IP 限流需要自訂網域 + WAF，延後。
 
 ## References
 

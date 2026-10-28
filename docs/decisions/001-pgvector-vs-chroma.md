@@ -2,7 +2,10 @@
 
 **Date:** 2026-06-09
 **Date decided:** 2026-06-09
-**Status:** Accepted
+**Status:** Superseded by [ADR-005](005-cloudflare-serverless.md)（2026-10-28）
+
+> 遠端部署改用 Cloudflare Vectorize（沿用 OpenAI 向量截斷至 256 維），pgvector 延後到需要 SQL join
+> 或超過 Vectorize 上限時再評估。以下保留原決策供追溯。
 
 ## Context
 

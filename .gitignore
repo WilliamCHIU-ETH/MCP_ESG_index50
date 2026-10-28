@@ -23,3 +23,12 @@ dist/
 
 # Local VS Code workspace settings
 .vscode/settings.json
+
+# Cloudflare Worker (v2) local artifacts
+.env.mcp-token
+data/
+.wrangler/
+python_modules/
+.venv-workers/
+*.ndjson
+*.npz

@@ -38,7 +38,7 @@ Three layers, each independently testable:
 **Ingestion layer** — offline pipeline: PDF → chunk → embed → store. Runs as a separate job,
 not on server startup.
 
-**Retrieval layer** — query-time: embed query (Gemini Embedding 2, 768 dims; see ADR-002) → vector search (pgvector; see ADR-001) → rerank (Phase 2+) → return
+**Retrieval layer** — query-time: embed query (remote: OpenAI `text-embedding-3-small` at 256 dims; see ADR-005, amending ADR-002) → vector search (remote: Cloudflare Vectorize; see ADR-005, superseding ADR-001) → rerank (Phase 2+) → return
 top-k with metadata. Storage-agnostic interface; concrete implementation behind an adapter.
 
 **Consumer layer** — MCP server acts as a thin adapter that calls the Retrieval layer. No
@@ -49,18 +49,20 @@ Retrieval layer.
 
 ## Architecture Decisions
 
-- [ADR-001](../../docs/decisions/001-pgvector-vs-chroma.md) — pgvector as vector store (Accepted)
-- [ADR-002](../../docs/decisions/002-embedding-versioning.md) — Gemini Embedding 2, 768 dims (Accepted)
-- [ADR-003](../../docs/decisions/003-mcp-as-adapter.md) — MCP as thin adapter (Proposed)
-- [ADR-004](../../docs/decisions/004-remote-transport-and-auth.md) — remote transport & auth (Proposed)
+- [ADR-001](../../docs/decisions/001-pgvector-vs-chroma.md) — pgvector as vector store (Superseded by ADR-005)
+- [ADR-002](../../docs/decisions/002-embedding-versioning.md) — Gemini Embedding 2, 768 dims (Accepted, amended by ADR-005)
+- [ADR-003](../../docs/decisions/003-mcp-as-adapter.md) — MCP as thin adapter (Accepted)
+- [ADR-004](../../docs/decisions/004-remote-transport-and-auth.md) — remote transport & auth (Accepted with amendments)
+- [ADR-005](../../docs/decisions/005-cloudflare-serverless.md) — Cloudflare Workers + Vectorize remote deployment (Accepted)
 
 ## Open Questions
 
-- [ ] ADR-003: RetrievalService interface contract — finalize before Phase 2 implementation begins
-- [ ] ADR-004: auth model — OAuth vs API key vs unauthenticated-with-rate-limit
-- [ ] ADR-004: rate limiting strategy for a public multi-user endpoint
-- [ ] RetrievalService statelessness — concurrency constraints for multi-user serving
-  (no per-session state in the Retrieval layer)
+- [x] ADR-003: RetrievalService interface contract — Accepted 2026-10-28 (v1 `RetrievalService`;
+  remote Worker mirrors the same output contract)
+- [x] ADR-004: auth model — secret path token for now, OAuth deferred (ADR-004 amendment, ADR-005)
+- [x] ADR-004: rate limiting strategy — request-size limits + Workers Free daily cap + prepaid OpenAI
+  budget; per-IP WAF limits deferred
+- [x] RetrievalService statelessness — remote Worker is fully stateless (MCP 2026-07-28)
 - [ ] Reranker strategy — cross-encoder vs score threshold; in Phase 2 scope or later?
 - [ ] Corpus refresh cadence — annual, triggered, or manual?
 
@@ -69,5 +71,5 @@ Retrieval layer.
 - All 5 Phase 2 entry conditions met (see project-brief.md)
 - Retrieval layer has its own test suite independent of MCP
 - At least one ADR per open question above is closed
-- A remote MCP client can complete a `search_esg_reports` tool call given only a URL
-  (no local setup)
+- [x] A remote MCP client can complete a `search_esg_reports` tool call given only a URL
+  (no local setup) — **met 2026-10-28** by the Cloudflare Worker (ADR-005, `worker/`)

@@ -1,12 +1,14 @@
 # ADR-003: MCP Server as a Thin Consumer Adapter
 
 **Date:** 2026-06-09
-**Status:** Proposed
+**Status:** Accepted（2026-10-28）
 
 ## Context
 
 Phase 1 MCP server 直接包含 retrieval 邏輯（embedding 呼叫、ChromaDB 查詢、結果格式化），導致傳輸層（MCP/stdio）與儲存層（ChromaDB）緊密耦合。任何儲存遷移或 retrieval 變更都需要修改 MCP server 本身。
-本 ADR 尚待正式接受；待 RetrievalService 介面合約定義完成後（參見 esg-platform-v2/spec.md 的 Open Questions），狀態將更新為 Accepted。
+2026-10-28：v1 的 `RetrievalService`（`src/claude_esg_mcp/retrieval.py`）已是 stateless 的 thin adapter 介面，
+本 ADR 改為 Accepted。遠端版（ADR-005）為了 CPU 與 bundle 大小，刻意在單一 Worker 檔內實作相同的
+驗證與輸出合約，而不是 import 這個 Python 套件；兩者以相同輸出格式與測試維持一致。
 
 2026-06-10 補充：專案 true north 確立為公開代管的多使用者遠端 MCP server
 （Streamable HTTP，見 ADR-004）。adapter 層因此將存在**兩個** transport——
