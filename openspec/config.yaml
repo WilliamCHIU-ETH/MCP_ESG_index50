@@ -1,31 +1,29 @@
 schema: spec-driven
 
 context: |
-  Project: Claude-first ESG RAG MCP server.
+  Project: remote ESG retrieval MCP server for Taiwan 50 ESG reports (v2.0.0).
   Language preference: Traditional Chinese for planning and user-facing summaries.
 
   Product positioning:
   - This is an agent tool, not an ESG Q&A app, not a UI-first chatbot, and not a generic data product.
   - The core asset is calibrated ESG retrieval and citation assembly.
   - The user value is avoiding ESG report downloading, parsing, embedding, indexing, and retrieval tuning.
-  - First target user is Claude Desktop / Claude MCP. Do not optimize for agent-agnostic support before Claude works well.
-  - Phase 2 true north: a publicly hosted, multi-user remote MCP server over Streamable HTTP (paste a URL into Claude Desktop, zero local setup). Local stdio remains the development transport. Transport and auth decisions: docs/decisions/004-remote-transport-and-auth.md.
+  - First target user is any MCP client (Claude Code, Claude, Cursor, etc.) connecting by URL.
 
-  Existing reusable asset:
-  - Source ESG RAG project is external to this repo and should not be committed.
-  - Existing local index is configured with CLAUDE_ESG_INDEX_PATH.
-  - Chroma collection: esg_reports_50
-  - Corpus: 50 Taiwan companies, 17,144 chunks
-  - Embedding model used by the existing index: OpenAI text-embedding-3-small, 1536 dimensions
-  - Citation metadata fields include company, source_file, page, chunk_id, char_count, language
-
-  Current MVP decisions:
-  - Phase 1 reuses the existing ChromaDB index; it does not rebuild PDFs, chunks, embeddings, or indexes.
-  - Phase 1 exposes retrieval evidence through MCP and lets Claude generate the final answer.
-  - Phase 1 default retrieval is vector-only.
+  Current state (v2, live since 2026-10-28; decision: docs/decisions/005-cloudflare-serverless.md):
+  - Remote MCP server runs on Cloudflare Workers Free: one Python Worker (worker/src/worker.py) with a
+    hand-written MCP 2026-07-28 stateless protocol layer (no official SDK), plus stateless legacy initialize.
+  - Vector store: Cloudflare Vectorize index esg-reports-256 (cosine, metadata index on company).
+  - Corpus: 50 Taiwan companies, 17,144 chunks; source data is the GitHub release
+    WilliamCHIU-ETH/esg-rag-query-system db-backup-v1 and is never committed.
+  - Index vectors: OpenAI text-embedding-3-small 1536-d vectors truncated to the first 256 dims and L2-normalized.
+  - Query-time embedding must use the same model with dimensions=256; any other model or dimension needs a new index.
+  - Access control: secret path token (/mcp/<MCP_PATH_TOKEN>); query <= 500 chars; body <= 16 KiB.
+  - The server returns evidence only; the client's AI writes the final answer. Default retrieval is vector-only.
+  - v1 local stdio server (src/claude_esg_mcp/, ChromaDB esg_reports_50, 1536-d via CLAUDE_ESG_INDEX_PATH)
+    remains the local development mode; its query embedding must stay 1536-d.
+  - Citation metadata fields: company, source_file, page, chunk_id (+ content).
   - Hybrid/rerank strategies are allowed only as explicit experiments or later work.
-  - Query-time embedding must be dimension-compatible with the 1536-dimensional index.
-  - Direct Chroma query_texts is risky because a default embedding function can produce 384-dimensional vectors.
 
   Historical evidence boundary:
   - Prior ablation showed vector-only outperformed adaptive hybrid under the original corpus, embedding, ChromaDB, and RAGAS setup.
@@ -43,7 +41,7 @@ rules:
     - Keep proposals concise and include explicit non-goals when scope could drift.
     - Distinguish MVP decisions from Phase 2 or future backlog items.
   design:
-    - Record why existing ChromaDB is reused or why a rebuild is justified.
+    - Record why the existing vectors (ChromaDB for v1, Vectorize for v2) are reused or why a rebuild is justified.
     - Record the retrieval default and how it affects old ablation claims.
     - Record whether Claude or the backend generates final answers.
   specs:

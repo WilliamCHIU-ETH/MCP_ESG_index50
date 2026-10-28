@@ -1,4 +1,6 @@
-# Implementation Summary
+# Implementation Summary (v1, 2026-06)
+
+> 這是 v1 本機 stdio 版的實作摘要。v2 遠端版見 [ADR-005](decisions/005-cloudflare-serverless.md) 與 [worker/README.md](../worker/README.md)。
 
 ## Implemented Behavior
 
