@@ -154,11 +154,6 @@ class RetrievalService:
         }
 
 
-def search_esg_reports(*args, **kwargs):
-    """Compatibility wrapper kept for future integration."""
-    raise NotImplementedError("Use RetrievalService.search_esg_reports instead")
-
-
 def migrate_legacy_chroma_config(index_path: str) -> None:
     """Migrate legacy Chroma collection config JSON to the 0.6.x shape."""
     sqlite_path = Path(index_path) / "chroma.sqlite3"

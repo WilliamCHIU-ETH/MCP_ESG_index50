@@ -1,6 +1,6 @@
 # esg-platform-v2
 
-**Status:** Draft
+**Status:** Active（remote 於 2026-10-28 上線，v2.0.0）
 **Supersedes:** claude-esg-mcp-retrieval (Phase 1)
 **Created:** 2026-06-09
 

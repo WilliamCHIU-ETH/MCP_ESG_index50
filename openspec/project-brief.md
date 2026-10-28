@@ -2,15 +2,15 @@
 
 ## One-Sentence Positioning
 
-Turn the existing Taiwan ESG RAG retrieval work into a Claude-first MCP server that lets Claude retrieve citation-ready ESG report evidence without users rebuilding the corpus, embeddings, or index.
+A remote MCP server that lets any MCP client retrieve citation-ready evidence from the ESG reports of 50 Taiwan companies by URL, without users rebuilding the corpus, embeddings, or index. Achieved on 2026-10-28 (v2.0.0).
 
 ## Destination (True North)
 
-A publicly hosted, multi-user remote MCP server over Streamable HTTP. Anyone can paste a URL
-into Claude Desktop and query the ESG corpus — no local setup, no local index, no local
-environment required. Phase 1's local stdio server validated feasibility; everything in
-Phase 2 (pgvector, re-embedding, layer separation) is a step toward this destination.
-Transport and auth decisions live in ADR-004.
+**Reached (2026-10-28).** A remote MCP server on Cloudflare Workers (Free plan) with a
+Cloudflare Vectorize index. Any MCP client can add the URL and query the ESG corpus — no local
+setup, no local index, no local environment required. Phase 1's local stdio server validated
+feasibility and remains the development mode. Decisions: ADR-004 (transport and auth) and
+ADR-005 (Cloudflare Workers + Vectorize).
 
 ## Product Boundary
 
@@ -20,28 +20,30 @@ The core asset is the calibrated retrieval pipeline and citation-ready evidence 
 
 ## First Target User
 
-The first version is for Claude users, especially Claude Desktop or another Claude MCP client. The first experience to optimize is:
+Any MCP client (Claude Code, Claude, Cursor, etc.) connected by URL. The experience to optimize is:
 
-1. User asks Claude an ESG question.
-2. Claude calls the MCP retrieval tool.
+1. User asks their AI tool an ESG question.
+2. The AI tool calls the MCP retrieval tool.
 3. The MCP server returns bounded evidence chunks with citations.
-4. Claude writes the answer using those citations.
+4. The AI tool writes the answer using those citations.
 
-Agent-agnostic support is a later expansion, not a Phase 1 constraint. The end state is remote
-URL-based connection (see Destination above); local stdio was the Phase 1 delivery form, and
-remains the development transport.
+Local stdio was the Phase 1 delivery form and remains the development transport.
 
 ## Existing Assets
 
-- Source ESG RAG project: external local project, not included in this repo
-- Existing local ChromaDB index: configure with `CLAUDE_ESG_INDEX_PATH`
+- Source ESG RAG project: external project, not included in this repo
+- Source data: GitHub release `WilliamCHIU-ETH/esg-rag-query-system` `db-backup-v1` (ChromaDB backup, not committed)
+- Remote index (v2): Cloudflare Vectorize `esg-reports-256` (256 dims, cosine, metadata index on `company`)
+- Local ChromaDB index (v1): configure with `CLAUDE_ESG_INDEX_PATH`
 - Collection: `esg_reports_50`
 - Corpus: 50 Taiwan companies, 17,144 chunks
-- Embedding: OpenAI `text-embedding-3-small`, 1536 dimensions
+- Embedding: OpenAI `text-embedding-3-small`, 1536 dimensions (v1); truncated to 256 dimensions (v2)
 - Metadata: `company`, `source_file`, `page`, `chunk_id`, `char_count`, `language`
 - Evaluation evidence: prior ablation comparing vector-only, keyword-only, and adaptive hybrid retrieval
 
-## Key Decisions
+## Key Decisions (Phase 1, historical)
+
+> Phase 1 decisions below are kept for history. Current decisions live in `docs/decisions/` (ADR-005 for v2).
 
 ### Phase 1 uses the existing ChromaDB index
 
@@ -59,7 +61,7 @@ The backend should not generate final ESG prose answers in the MVP. Claude is th
 
 The existing index expects 1536-dimensional vectors. The server must generate query embeddings using a compatible path and should fail fast on dimension mismatch.
 
-## Phase 1 Definition
+## Phase 1 Definition (historical, completed 2026-06-09)
 
 Phase 1 succeeds when a local Claude MCP server can:
 
@@ -71,7 +73,7 @@ Phase 1 succeeds when a local Claude MCP server can:
 - let Claude produce a cited answer;
 - pass automated unit tests and at least 20-30 manual Claude smoke-test questions.
 
-## Phase 1 Non-Goals
+## Phase 1 Non-Goals (historical)
 
 - Google embedding migration
 - PostgreSQL + pgvector migration
@@ -86,14 +88,7 @@ Phase 1 succeeds when a local Claude MCP server can:
 
 ## Phase 2 Focus
 
-Entry conditions before Phase 2 implementation begins:
-
-- Canonical schema — 9 core entities defined (company, report, section, chunk, embedding, citation, query, result, evaluation)
-- Three-layer separation — Ingestion / Retrieval / Consumer layers explicitly decoupled
-- Startup mutation moved out of the query-serving path (ingestion job, not server startup)
-- All Phase 2 ADRs finalized — status lives only in `docs/decisions/` (see also
-  `esg-platform-v2/spec.md` Open Questions)
-
-Phase 2 roadmap and migration plan live in `openspec/backlog.md`
-(see `migrate-storage-and-embedding-v2`). This brief does not track work items or
-decision status; it only defines product positioning and scope.
+The remote deployment is decided in [ADR-005](../docs/decisions/005-cloudflare-serverless.md)
+(Cloudflare Workers + Vectorize; the earlier pgvector + Gemini plan is superseded). Remaining
+work items live in `openspec/backlog.md`. This brief does not track work items or decision
+status; it only defines product positioning and scope.

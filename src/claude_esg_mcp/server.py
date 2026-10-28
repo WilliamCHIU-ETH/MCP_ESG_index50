@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-import sys
 from typing import Any, Callable
 
 from claude_esg_mcp.config import RetrievalSettings
@@ -18,15 +17,6 @@ TOOL_DESCRIPTION = (
     "Search Taiwan company ESG reports and return citation-ready evidence "
     "chunks for Claude to cite in the final answer."
 )
-
-
-def _ensure_vendor_path() -> None:
-    """Allow local .vendor installs to satisfy runtime imports."""
-    vendor_path = Path(__file__).resolve().parents[2] / ".vendor"
-    if vendor_path.exists():
-        vendor_str = str(vendor_path)
-        if vendor_str not in sys.path:
-            sys.path.insert(0, vendor_str)
 
 
 def build_default_retrieval_service(
@@ -72,7 +62,6 @@ def build_mcp_server(
 ) -> Any:
     """Build the FastMCP server and register the ESG search tool."""
     if fastmcp_factory is None:
-        _ensure_vendor_path()
         try:
             from mcp.server.fastmcp import FastMCP
         except ImportError as exc:
