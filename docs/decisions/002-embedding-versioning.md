@@ -1,7 +1,10 @@
 # ADR-002: Embedding Model Version Governance
 
 **Date:** 2026-06-09
-**Status:** Accepted
+**Status:** Accepted, amended by [ADR-005](005-cloudflare-serverless.md)（2026-10-28）
+
+> ADR-005：遠端版固定 OpenAI `text-embedding-3-small` 截斷至 256 維（index `esg-reports-256`），
+> Gemini 768 維遷移暫緩。版本化 index 與 rebuild 核准規則仍適用。
 
 ## Context
 
