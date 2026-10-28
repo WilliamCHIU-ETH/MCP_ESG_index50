@@ -1,201 +1,95 @@
-# Claude ESG MCP Server
+# 台灣 50 ESG 報告 MCP Server
 
-Claude-first MCP server for retrieving citation-ready evidence from ESG reports of 50 Taiwan listed companies (Taiwan 50 constituents, 17,144 chunks).
+> 讓 Claude 只靠一個網址，就能查詢台灣 50 成分股的 ESG 永續報告書，並回傳附頁碼的引用證據。
 
-**v2 (current): remote server.** Paste one URL into Claude as a custom connector; no local setup. It runs as a Cloudflare Python Worker plus a Vectorize index on the Workers Free plan. See [`worker/README.md`](worker/README.md) and [ADR-005](docs/decisions/005-cloudflare-serverless.md).
+```mermaid
+mindmap
+  root((ESG 50 MCP))
+    What 是什麼
+      一個遠端 MCP server
+      一個工具 search_esg_reports
+      50 家公司 17,144 段報告原文
+    Solves 解決什麼
+      報告書幾千頁 塞不進 context
+      引用要能查回第幾頁
+      不讓 server 自己生成答案
+    How 怎麼運作
+      問題轉成向量 OpenAI
+      找最接近的段落 Vectorize
+      回傳最多 5 段原文與出處
+      Claude 讀證據後自己寫答案
+    Stack 技術選型
+      MCP 2026-07-28 無狀態
+      Cloudflare Python Worker
+      手寫最小協定層
+      Workers Free 方案 月費 0
+```
 
-**v1: local stdio + ChromaDB.** Kept unchanged as the local development mode (tag `v1.0.0`). See [Local Development (stdio)](#local-development-stdio).
+| | |
+|---|---|
+| **這是什麼** | 部署在 Cloudflare 上的遠端 MCP server。把網址加成 Claude 的 custom connector，Claude 就多了一個 `search_esg_reports` 工具。 |
+| **解決什麼** | ESG 報告書動輒兩三百頁、50 家公司各一本。這個工具讓 Claude 回答「台積電範疇三排放怎麼揭露？」「哪些金控設了 2050 淨零目標？」時，引用的是報告原文，並附上公司、檔名、頁碼，可以回頭查證。 |
+| **怎麼運作** | 問題先轉成向量，再到向量資料庫比對 17,144 個報告段落，回傳最相關的 5 段。最後的回答由 Claude 統整。 |
 
-## What It Does
-
-- Exposes a single MCP tool: `search_esg_reports(query, company?, top_k<=5, strategy="vector")`
-- Generates query embeddings with OpenAI `text-embedding-3-small` (remote: 256 dims; local: 1536 dims)
-- Returns bounded evidence chunks with `company`, `source_file`, `page`, `chunk_id`, `content`, `score`, and `citation` (`公司 | 檔名 | p.頁 | chunk_id`)
-- Leaves final answer synthesis to Claude
-
-## Architecture (v2 remote)
+## 架構
 
 ```mermaid
 flowchart LR
-    C["Claude<br/>(custom connector)"] -->|"POST /mcp/&lt;token&gt;<br/>MCP 2026-07-28"| W["Cloudflare Python Worker<br/>esg-mcp"]
-    W -->|"embeddings<br/>text-embedding-3-small, 256d"| O["OpenAI API"]
-    W -->|"query topK, company filter"| V[("Vectorize<br/>esg-reports-256")]
-    subgraph Offline ingestion
-        B["Chroma backup<br/>db-backup-v1 (1536d)"] --> E["scripts/export_to_vectorize.py<br/>truncate to 256d + L2 normalize"]
+    C["Claude<br/>（custom connector）"] -->|"POST /mcp/{token}<br/>MCP 2026-07-28"| W["Cloudflare Python Worker<br/>esg-mcp"]
+    W -->|"問題轉向量<br/>text-embedding-3-small，256 維"| O["OpenAI API"]
+    W -->|"相似度查詢<br/>可依公司過濾"| V[("Cloudflare Vectorize<br/>esg-reports-256")]
+    subgraph offline["離線匯入"]
+        B["既有 ChromaDB 備份<br/>17,144 段，1536 維"] --> E["export_to_vectorize.py<br/>截斷成 256 維並正規化"]
     end
     E -->|"wrangler vectorize insert"| V
 ```
 
+## 一次查詢的流程
+
 ```mermaid
 sequenceDiagram
-    participant U as User
+    participant U as 使用者
     participant C as Claude
-    participant W as Worker (esg-mcp)
+    participant W as Worker（esg-mcp）
     participant O as OpenAI
     participant V as Vectorize
-    U->>C: Ask an ESG question
-    C->>W: tools/call search_esg_reports (query, company?)
-    W->>W: check path token, headers, limits
-    W->>O: embed query (256d)
-    O-->>W: vector
-    W->>V: query(topK, returnMetadata, filter company)
-    V-->>W: matches + metadata
-    W-->>C: content + structuredContent (citations)
-    C-->>U: Answer with citations
+    U->>C: 提出 ESG 問題
+    C->>W: tools/call search_esg_reports（query, company?）
+    W->>W: 檢查路徑 token、標頭、長度上限
+    W->>O: 問題轉成 256 維向量
+    O-->>W: 向量
+    W->>V: 查詢 top 5（可依公司過濾）
+    V-->>W: 段落與 metadata
+    W-->>C: 段落內容與引用（公司 | 檔名 | p.頁 | chunk_id）
+    C-->>U: 附引用的回答
 ```
 
-## Remote Usage (v2)
+## 我的部署
 
-1. Deploy following [`worker/README.md`](worker/README.md) (Vectorize index, export, secrets `OPENAI_API_KEY` and `MCP_PATH_TOKEN`, deploy).
-2. In Claude: Settings -> Connectors -> Add custom connector, URL `https://esg-mcp.<subdomain>.workers.dev/mcp/<MCP_PATH_TOKEN>`, no auth.
-3. The path token works like a password. Any other path returns 404 and never calls OpenAI.
+| 項目 | 實際狀況 |
+|---|---|
+| 平台 | Cloudflare Workers **Free** 方案加上 Vectorize，固定成本 0 元，關掉電腦也能用 |
+| 資料 | 50 家公司、17,144 個段落，沿用既有的 OpenAI 1536 維向量，截斷成 256 維，不必重新 embed |
+| 回應速度 | 一次查詢總耗時中位數約 0.5 秒（`tools/call` wall 488 ms），含 OpenAI 與 Vectorize |
+| 檢索品質 | 256 維與原本 1536 維的 top 5 重疊率：不限公司 72%、限定公司 80% |
+| 每次查詢費用 | 約 0.000001 美元（只有問題轉向量要付費） |
+| 防濫用 | 網址帶隨機 token，不符一律 404、不呼叫 OpenAI；query 最多 500 字、body 最多 16 KiB；OpenAI 預付 5 美元當硬上限 |
+| 品質保證 | 21 個自動化測試、上線前做過安全審查並修正 |
 
-Cost and abuse controls, CPU measurements and known limitations: [ADR-005](docs/decisions/005-cloudflare-serverless.md). Security review: [docs/security-review.md](docs/security-review.md).
+### 幾個技術決定
 
-## Repository Layout
+- **自己寫 MCP 協定層，不用官方 SDK。** 在 Workers 實測，官方 Python SDK 打包後 5.2 MB，新 isolate 每次要花 200 到 1,200 ms CPU；手寫最小協定層只有 33 KB，CPU 中位數約 15 到 20 ms。
+- **用 MCP 2026-07-28 無狀態協定。** 每個請求獨立，不需要 session 或長連線，所以能跑在 serverless 上。舊版 client 也相容。
+- **向量截斷成 256 維。** OpenAI 這個模型支援 Matryoshka 截斷，256 維剛好放得進 Vectorize Free 的 500 萬維儲存上限，也不用重跑 17,144 段 embedding。
 
-```text
-src/claude_esg_mcp/   v1 local stdio server (ChromaDB)
-worker/               v2 Cloudflare Worker (src/worker.py, wrangler.jsonc, tests/)
-scripts/              export_to_vectorize.py, quality_check.py, quality_proxy.py
-docs/decisions/       ADR-001 to ADR-005
-openspec/             specs and change history
-tests/                v1 tests
-```
+## 演進
 
-## Project Metadata
+- **v1（`v1.0.0`）：** 本機 stdio MCP server 加 ChromaDB，要在自己電腦裝環境、放索引檔才能用。程式仍在 `src/claude_esg_mcp/`，作為本機開發模式。
+- **v2（`v2.0.0`，目前）：** 搬到 Cloudflare，變成任何 Claude 只要一個網址就能用的遠端服務。
 
-- License: MIT
-- Package metadata lives in `pyproject.toml`
-- Repository: <https://github.com/WilliamCHIU-ETH/MCP_ESG_index50>
+## 延伸閱讀
 
-## Local Development (stdio)
-
-The v1 stdio server needs a local ChromaDB index and is meant for development.
-
-### Local Run
-
-This project standardizes on Python 3.12, `uv`, and a local `.venv`.
-
-Prerequisites:
-
-- `uv`
-- Python 3.12 available to `uv`
-
-```bash
-make setup
-make run
-```
-
-Required environment variables:
-
-- `OPENAI_API_KEY`
-- `CLAUDE_ESG_INDEX_PATH`, pointing to a local ChromaDB index directory
-
-Optional environment variables:
-
-- `CLAUDE_ESG_COLLECTION_NAME` default: `esg_reports_50`
-- `CLAUDE_ESG_EMBEDDING_MODEL` default: `text-embedding-3-small`
-- `CLAUDE_ESG_MAX_TOP_K` default: `5`
-- `CLAUDE_ESG_MAX_CONTENT_CHARS` default: `1200`
-
-Copy `.env.example` to `.env` for local runtime values. The template is intentionally early-stage and may change as the project evolves. The ESG vector database is not included in this public repo.
-
-### Developer Workflow
-
-Install pre-commit hooks once per clone:
-
-```bash
-make pre-commit-install
-```
-
-Run formatting and lint checks:
-
-```bash
-make lint
-make format
-```
-
-`pre-commit` runs `ruff format` and `ruff check` before each commit, so formatting and linting become part of the local commit path instead of a command you need to remember manually.
-
-### Claude Desktop Config
-
-Example Claude Desktop MCP config:
-
-```json
-{
-  "mcpServers": {
-    "claude-esg-mcp": {
-      "command": "uv",
-      "args": ["run", "claude-esg-mcp"],
-      "cwd": "/absolute/path/to/MCP_ESG_index50",
-      "env": {
-        "OPENAI_API_KEY": "YOUR_OPENAI_API_KEY",
-        "CLAUDE_ESG_INDEX_PATH": "/absolute/path/to/esg_50_vector_db",
-        "CLAUDE_ESG_COLLECTION_NAME": "esg_reports_50",
-        "CLAUDE_ESG_EMBEDDING_MODEL": "text-embedding-3-small",
-        "CLAUDE_ESG_MAX_TOP_K": "5",
-        "CLAUDE_ESG_MAX_CONTENT_CHARS": "1200"
-      }
-    }
-  }
-}
-```
-
-### Verification Commands
-
-Run unit and contract tests. These tests must not call OpenAI, ChromaDB, or other real external services:
-
-```bash
-make test
-```
-
-Run integration tests. These may exercise multiple project components, but should still avoid real external services unless explicitly marked as smoke tests:
-
-```bash
-make integration
-```
-
-Run opt-in live smoke tests after configuring `.env`. Smoke tests may call OpenAI and the configured ESG ChromaDB index:
-
-```bash
-make smoke
-```
-
-Test layout:
-
-```text
-tests/
-├── conftest.py          # Shared pytest import path setup and future fixtures
-├── unit/                # Pure unit tests with fakes/mocks only
-├── integration/         # Cross-component tests without live external services
-└── smoke/               # Live API/index tests, skipped unless env is configured
-```
-
-Mocking rule: unit tests use fakes, `unittest.mock`, or `pytest-mock`; integration tests and above are the only layers allowed to touch broader runtime dependencies. Live external dependencies belong in `tests/smoke/`.
-
-Verify the MCP tool is registered:
-
-```bash
-uv run python - <<'PY'
-import asyncio
-from claude_esg_mcp.server import build_mcp_server
-
-class FakeRetrievalService:
-    def search_esg_reports(self, **kwargs):
-        return {"query": kwargs["query"], "strategy": "vector", "results": []}
-
-async def main():
-    server = build_mcp_server(retrieval_service=FakeRetrievalService())
-    tools = await server.list_tools()
-    print([tool.name for tool in tools])
-
-asyncio.run(main())
-PY
-```
-
-Worker tests (no network; stubs the Workers runtime):
-
-```bash
-cd worker && python -m pytest tests -q
-```
+- [ADR-005：為什麼選 Cloudflare Workers + Vectorize](docs/decisions/005-cloudflare-serverless.md)：選項比較、CPU 實測、成本、已知限制
+- [安全審查](docs/security-review.md)
+- [Worker 部署細節](worker/README.md)
+- [所有架構決策紀錄](docs/decisions/)
